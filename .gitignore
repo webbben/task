@@ -1,1 +1,5 @@
+# database files
 *.db
+
+# build artifact
+task

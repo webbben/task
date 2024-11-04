@@ -40,7 +40,7 @@ task list -t
 	`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// load all tasks
-		tasks, err := tasks.GetAllTasks()
+		t, err := tasks.GetAllTasks()
 		if err != nil {
 			cmd.PrintErrln("Error loading tasks:", err)
 			return
@@ -49,9 +49,11 @@ task list -t
 		// check for filtering
 		// todo flag (-t) has priority over filter flag (-f) and sort flag (-s)
 		if todo {
-			showTodoTasks(tasks)
+			showTodoTasks(t)
 			return
 		}
+
+		tasks.PrintListOfTasks(t)
 	},
 }
 

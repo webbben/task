@@ -1,0 +1,12 @@
+#!/bin/bash
+
+BIN_NAME="task"
+
+go build -o $BIN_NAME
+
+if [ $? -ne 0 ]; then
+  echo "build failed"
+  exit 1
+fi
+
+./$BIN_NAME "$@"

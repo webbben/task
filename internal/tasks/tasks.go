@@ -45,6 +45,36 @@ func AddTask(title, description, category string, dueDate time.Time) (types.Task
 	})
 }
 
+func AddNote(taskID, note, noteName string) error {
+	db := storage.DB()
+	if db == nil {
+		return errors.New("failed to get task database")
+	}
+
+	return db.Update(func(tx *bbolt.Tx) error {
+		b := tx.Bucket([]byte(TASK_DB))
+		if b == nil {
+			return errors.New("failed to get task database")
+		}
+		data := b.Get([]byte(taskID))
+		var t types.Task
+		if err := json.Unmarshal(data, &t); err != nil {
+			return err
+		}
+		if t.Notes == nil {
+			t.Notes = make(map[string]string)
+		}
+		t.Notes[noteName] = note
+
+		// put back into json and put back into db
+		data, err := json.Marshal(t)
+		if err != nil {
+			return err
+		}
+		return b.Put([]byte(taskID), data)
+	})
+}
+
 // GetTask retrieves a task by ID
 func GetTask(id string) (*types.Task, error) {
 	db := storage.DB()
@@ -64,6 +94,35 @@ func GetTask(id string) (*types.Task, error) {
 		return nil, err
 	}
 	return &task, nil
+}
+
+func GetTasks(ids []string) ([]types.Task, error) {
+	db := storage.DB()
+	if db == nil {
+		return nil, errors.New("failed to get task database")
+	}
+
+	var tasks []types.Task
+	err := db.View(func(tx *bbolt.Tx) error {
+		b := tx.Bucket([]byte(TASK_DB))
+		if b == nil {
+			return errors.New("task bucket not found")
+		}
+		for _, id := range ids {
+			data := b.Get([]byte(id))
+			if data == nil {
+				return errors.New("task not found")
+			}
+			var t types.Task
+			if err := json.Unmarshal(data, &t); err != nil {
+				return err
+			}
+			tasks = append(tasks, t)
+		}
+		return nil
+	})
+
+	return tasks, err
 }
 
 func GetAllTasks() ([]types.Task, error) {
@@ -183,4 +242,60 @@ func formatDate(date time.Time) string {
 		out += fmt.Sprintf(" (%s)", date.Format("2006"))
 	}
 	return out
+}
+
+// FindTasksByIDPrefix finds a list of potential ID matches for a given ID prefix string.
+func FindTasksByIDPrefix(prefix string) ([]string, error) {
+	var matchingIDs []string
+	if len(prefix) > 8 {
+		return matchingIDs, errors.New("given ID prefix is too long")
+	}
+
+	db := storage.DB()
+	if db == nil {
+		return []string{}, errors.New("failed to get tasks db")
+	}
+
+	err := db.View(func(tx *bbolt.Tx) error {
+		b := tx.Bucket([]byte(TASK_DB))
+		if b == nil {
+			return nil
+		}
+
+		return b.ForEach(func(k, v []byte) error {
+			id := string(k)
+			if len(prefix) == len(id) {
+				if prefix == id {
+					matchingIDs = append(matchingIDs, id)
+				}
+				return nil
+			}
+
+			if id[:len(prefix)] == prefix {
+				matchingIDs = append(matchingIDs, id)
+			}
+			return nil
+		})
+	})
+	return matchingIDs, err
+}
+
+func ListPotentialTaskMatches(taskIDs []string) {
+	db := storage.DB()
+	if db == nil {
+		fmt.Println()
+	}
+	tasks, err := GetTasks(taskIDs)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	for _, t := range tasks {
+		taskTitle := t.Title
+		if len(taskTitle) > 15 {
+			taskTitle = taskTitle[:12] + "..."
+		}
+		fmt.Printf("%s (%s)", t.ID, taskTitle)
+	}
 }
