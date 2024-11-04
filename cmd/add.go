@@ -11,6 +11,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/webbben/task/internal/tasks"
+	"github.com/webbben/task/internal/types"
 )
 
 var (
@@ -53,13 +54,11 @@ the "title" argument is required, but all other arguments are optional. If no du
 			fmt.Println("Error adding task:", err)
 			return
 		}
-		fmt.Println(t)
+		tasks.PrintListOfTasks([]types.Task{t})
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(addCmd)
-
 	addCmd.Flags().StringVarP(&description, "description", "d", "", "a description of the task")
 	addCmd.Flags().StringVarP(&category, "category", "c", "", "a category for the task")
 	addCmd.Flags().StringVarP(&dueDate, "due-date", "D", "", "the due date for the task")

@@ -1,36 +1,118 @@
 package tasks
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/google/uuid"
 	"github.com/webbben/task/internal/storage"
 	"github.com/webbben/task/internal/types"
 	"github.com/webbben/task/internal/util"
+	"go.etcd.io/bbolt"
+)
+
+const (
+	TASK_DB = "tasks"
 )
 
 // AddTask creates a new task and stores it in the database
 func AddTask(title, description, category string, dueDate time.Time) (types.Task, error) {
 	task := types.Task{
-		ID:          uuid.New().String(),
+		ID:          uuid.New().String()[:8],
 		Title:       title,
 		Description: description,
 		Category:    category,
 		DueDate:     dueDate,
 		Status:      "pending",
 	}
-	return task, storage.AddTaskToDB(task)
+
+	db := storage.DB()
+	if db == nil {
+		return task, errors.New("failed to get task database")
+	}
+
+	return task, db.Update(func(tx *bbolt.Tx) error {
+		b := tx.Bucket([]byte(TASK_DB))
+		data, err := json.Marshal(task)
+		if err != nil {
+			return err
+		}
+		return b.Put([]byte(task.ID), data)
+	})
 }
 
 // GetTask retrieves a task by ID
 func GetTask(id string) (*types.Task, error) {
-	return storage.GetTaskFromDB(id)
+	db := storage.DB()
+	if db == nil {
+		return nil, errors.New("failed to get task database")
+	}
+	var task types.Task
+	err := db.View(func(tx *bbolt.Tx) error {
+		b := tx.Bucket([]byte(TASK_DB))
+		data := b.Get([]byte(id))
+		if data == nil {
+			return fmt.Errorf("task not found")
+		}
+		return json.Unmarshal(data, &task)
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &task, nil
 }
 
 func GetAllTasks() ([]types.Task, error) {
-	return storage.GetAllTasksFromDB()
+	db := storage.DB()
+	if db == nil {
+		return []types.Task{}, errors.New("failed to get task database")
+	}
+	var tasks []types.Task
+	err := db.View(func(tx *bbolt.Tx) error {
+		b := tx.Bucket([]byte(TASK_DB))
+		return b.ForEach(func(k, v []byte) error {
+			var task types.Task
+			if err := json.Unmarshal(v, &task); err != nil {
+				return err
+			}
+			tasks = append(tasks, task)
+			return nil
+		})
+	})
+	return tasks, err
+}
+
+func DeleteTask(id string) error {
+	db := storage.DB()
+	if db == nil {
+		return errors.New("failed to get task database")
+	}
+
+	return db.Update(func(tx *bbolt.Tx) error {
+		b := tx.Bucket([]byte(TASK_DB))
+		return b.Delete([]byte(id))
+	})
+}
+
+func DeleteAllTasks() error {
+	db := storage.DB()
+	if db == nil {
+		return errors.New("failed to get task database")
+	}
+
+	return db.Update(func(tx *bbolt.Tx) error {
+		b := tx.Bucket([]byte(TASK_DB))
+		if b == nil {
+			return nil
+		}
+		return b.ForEach(func(k, v []byte) error {
+			return b.Delete(k)
+		})
+	})
 }
 
 // DisplayTasks prints a list of tasks in a formatted table
@@ -39,55 +121,66 @@ func PrintListOfTasks(tasks []types.Task) {
 	headers := []string{"ID", "Title", "Category", "Due Date", "Status", "Pr."}
 	colWidths := []int{4, 15, 8, 12, 10, 3} // Width for each column
 
-	// Create table borders and separators
-	topBorder := "┌" + strings.Repeat("─", colWidths[0]+2) + "┬" +
-		strings.Repeat("─", colWidths[1]+2) + "┬" +
-		strings.Repeat("─", colWidths[2]+2) + "┬" +
-		strings.Repeat("─", colWidths[3]+2) + "┬" +
-		strings.Repeat("─", colWidths[4]+2) + "┬" +
-		strings.Repeat("─", colWidths[5]+2) + "┐\n"
+	// Set up gray color for borders
+	borderColor := color.New(color.FgHiBlack)
+	totalWidth := sum(colWidths) + len(colWidths)*3 - 1
 
-	headerSeparator := "├" + strings.Repeat("─", colWidths[0]+2) + "┼" +
-		strings.Repeat("─", colWidths[1]+2) + "┼" +
-		strings.Repeat("─", colWidths[2]+2) + "┼" +
-		strings.Repeat("─", colWidths[3]+2) + "┼" +
-		strings.Repeat("─", colWidths[4]+2) + "┼" +
-		strings.Repeat("─", colWidths[5]+2) + "┤\n"
-
-	bottomBorder := "└" + strings.Repeat("─", colWidths[0]+2) + "┴" +
-		strings.Repeat("─", colWidths[1]+2) + "┴" +
-		strings.Repeat("─", colWidths[2]+2) + "┴" +
-		strings.Repeat("─", colWidths[3]+2) + "┴" +
-		strings.Repeat("─", colWidths[4]+2) + "┴" +
-		strings.Repeat("─", colWidths[5]+2) + "┘\n"
+	// Create top border, header separator, and bottom border with lighter color
+	topBorder := borderColor.Sprintf("┌%s┐\n", strings.Repeat("─", totalWidth))
+	headerSeparator := borderColor.Sprintf("├%s┤\n", strings.Repeat("─", totalWidth))
+	bottomBorder := borderColor.Sprintf("└%s┘\n", strings.Repeat("─", totalWidth))
 
 	// Print the top border
 	fmt.Print(topBorder)
 
-	// Print the headers
-	fmt.Print("│")
+	// Print the headers without vertical separators
+	fmt.Print(borderColor.Sprintf("│"))
 	for i, header := range headers {
-		fmt.Printf(" %-*s │", colWidths[i], header)
+		fmt.Printf(" %-*s", colWidths[i], header)
+		if i < len(headers)-1 {
+			fmt.Print("  ")
+		}
 	}
-	fmt.Print("\n" + headerSeparator)
+	fmt.Print(borderColor.Sprintf(" │\n") + headerSeparator)
 
 	// Print each task row
 	for _, task := range tasks {
-		fmt.Print("│")
+		fmt.Print(borderColor.Sprintf("│"))
 		values := []string{
 			task.ID[:4],
 			util.Truncate(task.Title, colWidths[1]),
 			util.Truncate(task.Category, colWidths[2]),
-			task.DueDate.Format("2006-01-02"),
+			formatDate(task.DueDate),
 			task.Status,
 			fmt.Sprintf("%d", task.Priority),
 		}
 		for i, value := range values {
-			fmt.Printf(" %-*s │", colWidths[i], value)
+			fmt.Printf(" %-*s", colWidths[i], value)
+			if i < len(values)-1 {
+				fmt.Print("  ")
+			}
 		}
-		fmt.Println()
+		fmt.Print(borderColor.Sprintf(" │\n"))
 	}
 
 	// Print the bottom border
 	fmt.Print(bottomBorder)
+}
+
+// sum calculates the total width of the columns and adds padding for borders
+func sum(colWidths []int) int {
+	total := 0
+	for _, width := range colWidths {
+		total += width
+	}
+	return total
+}
+
+// formatDate formats the given date to M-D. If year is not current, also shows year at the end in parentheses.
+func formatDate(date time.Time) string {
+	out := date.Format("1-2")
+	if date.Year() != time.Now().Year() {
+		out += fmt.Sprintf(" (%s)", date.Format("2006"))
+	}
+	return out
 }
