@@ -2,6 +2,10 @@ package storage
 
 import "go.etcd.io/bbolt"
 
+const (
+	TASK_DB = "tasks"
+)
+
 var db *bbolt.DB
 
 // OpenDatabase opens the BoltDB database at the given path

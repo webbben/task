@@ -15,10 +15,6 @@ import (
 	"go.etcd.io/bbolt"
 )
 
-const (
-	TASK_DB = "tasks"
-)
-
 // AddTask creates a new task and stores it in the database
 func AddTask(title, description, category string, dueDate time.Time) (types.Task, error) {
 	task := types.Task{
@@ -36,7 +32,7 @@ func AddTask(title, description, category string, dueDate time.Time) (types.Task
 	}
 
 	return task, db.Update(func(tx *bbolt.Tx) error {
-		b := tx.Bucket([]byte(TASK_DB))
+		b := tx.Bucket([]byte(storage.TASK_DB))
 		data, err := json.Marshal(task)
 		if err != nil {
 			return err
@@ -52,7 +48,7 @@ func AddNote(taskID, note, noteName string) error {
 	}
 
 	return db.Update(func(tx *bbolt.Tx) error {
-		b := tx.Bucket([]byte(TASK_DB))
+		b := tx.Bucket([]byte(storage.TASK_DB))
 		if b == nil {
 			return errors.New("failed to get task database")
 		}
@@ -83,7 +79,7 @@ func GetTask(id string) (*types.Task, error) {
 	}
 	var task types.Task
 	err := db.View(func(tx *bbolt.Tx) error {
-		b := tx.Bucket([]byte(TASK_DB))
+		b := tx.Bucket([]byte(storage.TASK_DB))
 		data := b.Get([]byte(id))
 		if data == nil {
 			return fmt.Errorf("task not found")
@@ -104,7 +100,7 @@ func GetTasks(ids []string) ([]types.Task, error) {
 
 	var tasks []types.Task
 	err := db.View(func(tx *bbolt.Tx) error {
-		b := tx.Bucket([]byte(TASK_DB))
+		b := tx.Bucket([]byte(storage.TASK_DB))
 		if b == nil {
 			return errors.New("task bucket not found")
 		}
@@ -132,7 +128,7 @@ func GetAllTasks() ([]types.Task, error) {
 	}
 	var tasks []types.Task
 	err := db.View(func(tx *bbolt.Tx) error {
-		b := tx.Bucket([]byte(TASK_DB))
+		b := tx.Bucket([]byte(storage.TASK_DB))
 		return b.ForEach(func(k, v []byte) error {
 			var task types.Task
 			if err := json.Unmarshal(v, &task); err != nil {
@@ -152,7 +148,7 @@ func DeleteTask(id string) error {
 	}
 
 	return db.Update(func(tx *bbolt.Tx) error {
-		b := tx.Bucket([]byte(TASK_DB))
+		b := tx.Bucket([]byte(storage.TASK_DB))
 		return b.Delete([]byte(id))
 	})
 }
@@ -164,7 +160,7 @@ func DeleteAllTasks() error {
 	}
 
 	return db.Update(func(tx *bbolt.Tx) error {
-		b := tx.Bucket([]byte(TASK_DB))
+		b := tx.Bucket([]byte(storage.TASK_DB))
 		if b == nil {
 			return nil
 		}
@@ -257,7 +253,7 @@ func FindTasksByIDPrefix(prefix string) ([]string, error) {
 	}
 
 	err := db.View(func(tx *bbolt.Tx) error {
-		b := tx.Bucket([]byte(TASK_DB))
+		b := tx.Bucket([]byte(storage.TASK_DB))
 		if b == nil {
 			return nil
 		}

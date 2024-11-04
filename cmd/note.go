@@ -75,10 +75,15 @@ func taskIDCompletion(cmd *cobra.Command, args []string, s string) ([]string, co
 	//	return nil, cobra.ShellCompDirectiveNoFileComp
 	//}
 
-	matches, err := tasks.FindTasksByIDPrefix(s)
+	taskPreviews, err := util.CompleteTaskID(s)
 	if err != nil {
 		cmd.PrintErrln("Error finding task IDs:", err)
 		return nil, cobra.ShellCompDirectiveNoFileComp
+	}
+	var matches []string
+	for _, preview := range taskPreviews {
+		comp := fmt.Sprintf("%s\t(%s)", preview.ID, util.Truncate(preview.Title, 10))
+		matches = append(matches, comp)
 	}
 
 	return matches, cobra.ShellCompDirectiveNoFileComp
