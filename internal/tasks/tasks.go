@@ -15,10 +15,21 @@ import (
 	"go.etcd.io/bbolt"
 )
 
+// generates an ID that starts with the first 4 characters of the task title
+func GenerateTaskID(title string) string {
+	formatted := strings.ToLower(strings.ReplaceAll(title, " ", ""))
+	genID := uuid.New().String()
+	if len(formatted) > 4 {
+		formatted = formatted[:4]
+	}
+	out := formatted + genID
+	return out[:8]
+}
+
 // AddTask creates a new task and stores it in the database
 func AddTask(title, description, category string, dueDate time.Time) (types.Task, error) {
 	task := types.Task{
-		ID:          uuid.New().String()[:8],
+		ID:          GenerateTaskID(title),
 		Title:       title,
 		Description: description,
 		Category:    category,
@@ -174,7 +185,7 @@ func DeleteAllTasks() error {
 func PrintListOfTasks(tasks []types.Task) {
 	// Define headers and their width
 	headers := []string{"ID", "Title", "Category", "Due Date", "Status", "Pr."}
-	colWidths := []int{4, 15, 8, 12, 10, 3} // Width for each column
+	colWidths := []int{8, 15, 8, 12, 10, 3} // Width for each column
 
 	// Set up gray color for borders
 	borderColor := color.New(color.FgHiBlack)
@@ -202,7 +213,7 @@ func PrintListOfTasks(tasks []types.Task) {
 	for _, task := range tasks {
 		fmt.Print(borderColor.Sprintf("│"))
 		values := []string{
-			task.ID[:4],
+			task.ID,
 			util.Truncate(task.Title, colWidths[1]),
 			util.Truncate(task.Category, colWidths[2]),
 			formatDate(task.DueDate),
