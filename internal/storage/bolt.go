@@ -3,7 +3,9 @@ package storage
 import "go.etcd.io/bbolt"
 
 const (
-	TASK_DB = "tasks"
+	TASK_DB        = "tasks.db"
+	ACTIVE_BUCKET  = "active"
+	ARCHIVE_BUCKET = "archive"
 )
 
 var db *bbolt.DB
@@ -18,7 +20,11 @@ func OpenDatabase(path string) error {
 
 	// Ensure the tasks bucket exists
 	return db.Update(func(tx *bbolt.Tx) error {
-		_, err := tx.CreateBucketIfNotExists([]byte("tasks"))
+		_, err := tx.CreateBucketIfNotExists([]byte(ACTIVE_BUCKET))
+		if err != nil {
+			return err
+		}
+		_, err = tx.CreateBucketIfNotExists([]byte(ARCHIVE_BUCKET))
 		return err
 	})
 }

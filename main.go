@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	if err := storage.OpenDatabase("tasks.db"); err != nil {
+	if err := storage.OpenDatabase(storage.TASK_DB); err != nil {
 		log.Fatalf("Failed to open database: %v", err)
 	}
 	defer storage.CloseDatabase()
