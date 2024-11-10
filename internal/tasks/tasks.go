@@ -34,6 +34,7 @@ var (
 
 	// status colors
 	comp = color.New(color.BgGreen, color.FgBlack)
+	prog = color.New(color.FgCyan)
 
 	// columns that will be displayed in the table
 	headers = []string{colID, colTitle, colDueDate, colStatus, colPriority}
@@ -330,6 +331,8 @@ func formatStatus(status int) string {
 	out := constants.TaskStatusDisplay[status]
 	if status == constants.TaskStatus.Complete {
 		out = comp.Sprint(out)
+	} else if status == constants.TaskStatus.InProgress {
+		out = prog.Sprint(out)
 	}
 	return out
 }
