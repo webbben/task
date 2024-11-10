@@ -32,6 +32,9 @@ var (
 	today    = color.New(color.FgHiYellow)
 	tomorrow = color.New(color.FgCyan)
 
+	// status colors
+	comp = color.New(color.BgGreen, color.FgBlack)
+
 	// columns that will be displayed in the table
 	headers = []string{colID, colTitle, colDueDate, colStatus, colPriority}
 
@@ -261,7 +264,7 @@ func PrintListOfTasks(tasks []types.Task) {
 			case colDueDate:
 				value = formatDate(task.DueDate)
 			case colStatus:
-				value = constants.TaskStatusDisplay[task.Status]
+				value = formatStatus(task.Status)
 			case colPriority:
 				value = fmt.Sprintf("%d", task.Priority)
 			default:
@@ -320,6 +323,14 @@ func formatDate(date time.Time) string {
 		out = tomorrow.Sprint(out)
 	}
 
+	return out
+}
+
+func formatStatus(status int) string {
+	out := constants.TaskStatusDisplay[status]
+	if status == constants.TaskStatus.Complete {
+		out = comp.Sprint(out)
+	}
 	return out
 }
 

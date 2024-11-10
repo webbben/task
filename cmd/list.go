@@ -2,10 +2,12 @@ package cmd
 
 import (
 	"sort"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/webbben/task/internal/tasks"
 	"github.com/webbben/task/internal/types"
+	"github.com/webbben/task/internal/util"
 )
 
 var (
@@ -45,6 +47,12 @@ task list -t
 			cmd.PrintErrln("Error loading tasks:", err)
 			return
 		}
+		todaysCompTasks, err := tasks.GetCompletedTasks(util.RoundDateDown(time.Now()))
+		if err != nil {
+			cmd.PrintErrln("Error loading completed tasks:", err)
+			return
+		}
+		t = append(t, todaysCompTasks...)
 
 		// check for filtering
 		// todo flag (-t) has priority over filter flag (-f) and sort flag (-s)
