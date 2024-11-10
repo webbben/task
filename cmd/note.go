@@ -69,11 +69,11 @@ func init() {
 }
 
 // taskIDCompletion provides auto-completion for task IDs
-func taskIDCompletion(cmd *cobra.Command, args []string, s string) ([]string, cobra.ShellCompDirective) {
+func taskIDCompletion(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 	// only do completion for the task ID arg, which is the first one
 	if len(args) > 0 {
 		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
 
-	return util.TaskIDCompletionFn(s, cmd)
+	return util.TaskIDCompletionFn(toComplete, cmd)
 }

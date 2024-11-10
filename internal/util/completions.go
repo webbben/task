@@ -71,3 +71,21 @@ func TaskIDCompletionFn(s string, cmd *cobra.Command) ([]string, cobra.ShellComp
 
 	return matches, cobra.ShellCompDirectiveNoFileComp
 }
+
+// MatchFromListCompletionFn is a completion function for a given list of possible options.
+//
+// if the given string is a substring (or equal) to any of the options, those options will be returned.
+func MatchFromListCompletionFn(s string, options []string, cmd *cobra.Command) ([]string, cobra.ShellCompDirective) {
+	matches := make([]string, 0)
+
+	for _, op := range options {
+		if len(s) > len(op) {
+			continue
+		}
+		if s == op[:len(s)] {
+			matches = append(matches, op)
+		}
+	}
+
+	return matches, cobra.ShellCompDirectiveNoFileComp
+}

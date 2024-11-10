@@ -261,7 +261,7 @@ func PrintListOfTasks(tasks []types.Task) {
 			case colDueDate:
 				value = formatDate(task.DueDate)
 			case colStatus:
-				value = task.Status
+				value = constants.TaskStatusDisplay[task.Status]
 			case colPriority:
 				value = fmt.Sprintf("%d", task.Priority)
 			default:
