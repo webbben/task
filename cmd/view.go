@@ -1,40 +1,40 @@
-/*
-Copyright © 2024 NAME HERE <EMAIL ADDRESS>
-
-*/
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
+	taskui "github.com/webbben/task/internal/ui/task-ui"
+	"github.com/webbben/task/internal/util"
 )
 
 // viewCmd represents the view command
 var viewCmd = &cobra.Command{
 	Use:   "view",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+	Short: "view the details of a single task",
+	Long: `Launch a TUI application to view the details of a single task, such as description, notes, etc.
+	
+Example:
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+task view 9bf4`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("view called")
+		if len(args) == 0 {
+			cmd.PrintErrln("task ID required")
+		}
+		taskID := args[0]
+		err := taskui.RunUI(taskID)
+		if err != nil {
+			cmd.PrintErrln(err)
+		}
 	},
 }
 
 func init() {
+	viewCmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		// only do completion for the task ID arg, which is the first one
+		if len(args) > 0 {
+			return nil, cobra.ShellCompDirectiveNoFileComp
+		}
+
+		return util.TaskIDCompletionFn(toComplete, cmd)
+	}
 	rootCmd.AddCommand(viewCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// viewCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// viewCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }

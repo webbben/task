@@ -47,7 +47,7 @@ task note 3bp4`,
 		}
 
 		// get note to add to task
-		today := time.Now().Format("1-2-2006")
+		today := time.Now().Format("1-2-2006 15:04")
 		note := ""
 		if len(args) >= 2 {
 			note = args[1]
