@@ -14,5 +14,5 @@ type Task struct {
 	Priority    int               `json:"priority"`
 	ChildTasks  []Task            `json:"child_tasks"`
 	Notes       map[string]string `json:"notes"`
-	LastUpdate  time.Time
+	LastUpdate  time.Time         `json:"last_update"`
 }

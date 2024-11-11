@@ -17,12 +17,13 @@ import (
 )
 
 const (
-	colID       = "ID"
-	colTitle    = "Title"
-	colCategory = "Cat."
-	colDueDate  = "Due Date"
-	colStatus   = "Status"
-	colPriority = "Pr."
+	colID         = "ID"
+	colTitle      = "Title"
+	colCategory   = "Cat."
+	colDueDate    = "Due Date"
+	colStatus     = "Status"
+	colPriority   = "Pr."
+	colLastUpdate = "Upd."
 )
 
 var (
@@ -37,16 +38,17 @@ var (
 	prog = color.New(color.FgCyan)
 
 	// columns that will be displayed in the table
-	headers = []string{colID, colTitle, colDueDate, colStatus, colPriority}
+	headers = []string{colID, colTitle, colDueDate, colStatus, colPriority, colLastUpdate}
 
 	// widths for each column type
 	colWidths = map[string]int{
-		colID:       8,
-		colTitle:    18,
-		colCategory: 6,
-		colDueDate:  10,
-		colStatus:   8,
-		colPriority: 3,
+		colID:         8,
+		colTitle:      18,
+		colCategory:   6,
+		colDueDate:    10,
+		colStatus:     8,
+		colPriority:   3,
+		colLastUpdate: 4,
 	}
 )
 
@@ -161,8 +163,8 @@ func GetTasks(ids []string) ([]types.Task, error) {
 			if data == nil {
 				return errors.New("task not found")
 			}
-			var t types.Task
-			if err := json.Unmarshal(data, &t); err != nil {
+			t, err := unpackTaskJson(data)
+			if err != nil {
 				return err
 			}
 			tasks = append(tasks, t)
@@ -186,8 +188,8 @@ func GetAllTasks() ([]types.Task, error) {
 			return nil
 		}
 		return b.ForEach(func(k, v []byte) error {
-			var task types.Task
-			if err := json.Unmarshal(v, &task); err != nil {
+			task, err := unpackTaskJson(v)
+			if err != nil {
 				return err
 			}
 			tasks = append(tasks, task)
@@ -195,6 +197,19 @@ func GetAllTasks() ([]types.Task, error) {
 		})
 	})
 	return tasks, err
+}
+
+func unpackTaskJson(v []byte) (types.Task, error) {
+	var task types.Task
+	if err := json.Unmarshal(v, &task); err != nil {
+		return task, err
+	}
+	// handle any data updates or corrections
+	// e.g. a new property was added and doesn't exist on a task yet, so add a default
+	if task.LastUpdate.IsZero() {
+		task.LastUpdate = time.Now()
+	}
+	return task, nil
 }
 
 func DeleteTask(id string) error {
@@ -268,6 +283,8 @@ func PrintListOfTasks(tasks []types.Task) {
 				value = formatStatus(task.Status)
 			case colPriority:
 				value = fmt.Sprintf("%d", task.Priority)
+			case colLastUpdate:
+				value = timeSinceDateFormat(task.LastUpdate)
 			default:
 				value = "?"
 			}
@@ -325,6 +342,24 @@ func formatDate(date time.Time) string {
 	}
 
 	return out
+}
+
+// timeSinceDateFormat returns the number of days, weeks, or months since the given date.
+//
+// the string is formatted as a number followed by a letter which represents the unit ("d", "w", or "m").
+func timeSinceDateFormat(date time.Time) string {
+	duration := time.Since(date)
+
+	days := int(duration.Hours() / 24)
+	if days < 14 {
+		return fmt.Sprintf("%vd", days)
+	}
+	weeks := days / 7
+	if weeks < 8 {
+		return fmt.Sprintf("%vw", weeks)
+	}
+	months := days / 30
+	return fmt.Sprintf("%vm", months)
 }
 
 func formatStatus(status int) string {
