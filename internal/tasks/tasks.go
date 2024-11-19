@@ -251,15 +251,23 @@ func PrintListOfTasks(tasks []types.Task) {
 		log.Println("failed to get terminal size:", err)
 		totalWidth = 80
 	}
-	totalWidth -= 2
-	// Set up gray color for borders
-	borderColor := color.New(color.FgHiBlack)
+	totalWidth -= 2 // make space for the borders on the sides
 	titleWidth := totalWidth - baseTableWidth()
-	if titleWidth > colWidths[colTitle] {
-		colWidths[colTitle] = titleWidth
+	if titleWidth < colWidths[colTitle] {
+		// terminal is too small for the current configuration; consider removing columns
+		overflow := colWidths[colTitle] - titleWidth
+		removeHeader(colPriority) // hide priority col
+		if overflow >= 7 {
+			// also hide last update col as a final measure
+			removeHeader(colLastUpdate)
+		}
+		// recalculate title width after column removals
+		titleWidth = totalWidth - baseTableWidth()
 	}
+	colWidths[colTitle] = titleWidth
 
 	// Create top border, header separator, and bottom border with lighter color
+	borderColor := color.New(color.FgHiBlack) // Set up gray color for borders
 	topBorder := borderColor.Sprintf("┌%s┐\n", strings.Repeat("─", totalWidth))
 	headerSeparator := borderColor.Sprintf("├%s┤\n", strings.Repeat("─", totalWidth))
 	bottomBorder := borderColor.Sprintf("└%s┘\n", strings.Repeat("─", totalWidth))
@@ -270,6 +278,10 @@ func PrintListOfTasks(tasks []types.Task) {
 	// Print the headers without vertical separators
 	fmt.Print(borderColor.Sprintf("│"))
 	for i, header := range headers {
+		if header == "X" {
+			// ignore removed headers
+			continue
+		}
 		fmt.Printf(" %-*s", colWidths[header], header)
 		if i < len(headers)-1 {
 			fmt.Print("  ")
@@ -297,8 +309,10 @@ func PrintListOfTasks(tasks []types.Task) {
 				value = fmt.Sprintf("%d", task.Priority)
 			case colLastUpdate:
 				value = timeSinceDateFormat(task.LastUpdate)
+			case "X":
+				continue // deleted header due to terminal being too small
 			default:
-				value = "?"
+				value = "?" // unknown header
 			}
 			value = util.Truncate(value, colWidths[header])
 
@@ -319,14 +333,18 @@ func PrintListOfTasks(tasks []types.Task) {
 // sum calculates the total width of the fixed-size columns (i.e. those besides the title)
 // including padding
 func baseTableWidth() int {
-	total := 0
-	for _, header := range headers {
-		if header == colTitle {
+	total := 2 // left border of table
+	for i, header := range headers {
+		// exclude title from calc. also exclude any removed headers (if terminal is too small, some may be removed)
+		if header == colTitle || header == "X" {
 			continue
 		}
-		total += colWidths[header]
+		total += colWidths[header] + 1
+		if i < len(headers)-1 {
+			total += 2 // gap between each column
+		}
 	}
-	return total + len(headers)*3 - 1
+	return total + 2 // right border of table
 }
 
 // formatDate formats the given date to M-D. If year is not current, also shows year at the end in parentheses.
@@ -450,5 +468,13 @@ func ListPotentialTaskMatches(taskIDs []string) {
 			taskTitle = taskTitle[:12] + "..."
 		}
 		fmt.Printf("%s (%s)", t.ID, taskTitle)
+	}
+}
+
+func removeHeader(h string) {
+	for i := 0; i < len(headers); i++ {
+		if headers[i] == h {
+			headers[i] = "X"
+		}
 	}
 }
