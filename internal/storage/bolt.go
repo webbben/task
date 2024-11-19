@@ -1,6 +1,15 @@
 package storage
 
-import "go.etcd.io/bbolt"
+import (
+	"log"
+	"os"
+	"os/user"
+	"path/filepath"
+
+	"go.etcd.io/bbolt"
+)
+
+var db *bbolt.DB
 
 const (
 	TASK_DB        = "tasks.db"
@@ -8,12 +17,47 @@ const (
 	ARCHIVE_BUCKET = "archive"
 )
 
-var db *bbolt.DB
+func ConfigPathUnix() string {
+	usr, err := user.Current()
+	if err != nil {
+		log.Fatal("failed to get config path:", err)
+	}
+	path := filepath.Join(usr.HomeDir, ".config/task")
+	if err := ensureDir(path); err != nil {
+		log.Fatal(err)
+	}
+	return path
+}
 
-// OpenDatabase opens the BoltDB database at the given path
-func OpenDatabase(path string) error {
+func AppDataPathUnix() string {
+	usr, err := user.Current()
+	if err != nil {
+		log.Fatal("failed to get config path:", err)
+	}
+	path := filepath.Join(usr.HomeDir, ".local/share/task")
+	if err := ensureDir(path); err != nil {
+		log.Fatal(err)
+	}
+	return path
+}
+
+func ensureDir(path string) error {
+	_, err := os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			// if it doesn't exist, create it
+			return os.MkdirAll(path, os.ModePerm)
+		}
+		return err
+	}
+	return nil
+}
+
+// OpenDatabase opens the BoltDB database of the given name
+func OpenDatabase(name string) error {
+	fullpath := filepath.Join(AppDataPathUnix(), name)
 	var err error
-	db, err = bbolt.Open(path, 0600, nil)
+	db, err = bbolt.Open(fullpath, 0600, nil)
 	if err != nil {
 		return err
 	}
