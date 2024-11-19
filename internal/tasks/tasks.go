@@ -55,15 +55,54 @@ var (
 	}
 )
 
-// generates an ID that starts with the first 4 characters of the task title
+// generates an ID that includes the task title as much as possible.
+// doing this so it's easy to predict the task ID when typing them in the CLI, since it's a lot
+// easier than memorizing completely randomized IDs.
+//
+// If a given title is already taken (e.g. you use the same or similar title for tasks often), then
+// the task ID will progressively become more full of random digits, starting from the end.
 func GenerateTaskID(title string) string {
+	maxIDLen := 12
 	formatted := strings.ToLower(strings.ReplaceAll(title, " ", ""))
-	genID := uuid.New().String()
-	if len(formatted) > 4 {
-		formatted = formatted[:4]
+	genID := strings.ReplaceAll(uuid.New().String(), "-", "")
+	out := (formatted + genID)[:maxIDLen]
+	for {
+		inUse, err := idAlreadyUsed(out)
+		if err != nil {
+			log.Println("error occurred during ID generation:", err)
+			log.Println("proceeding with random ID")
+			return genID[:maxIDLen]
+		}
+		if !inUse {
+			return out
+		}
+		if len(formatted) == 0 {
+			return genID[:maxIDLen]
+		}
+		// keep reducing the title and replacing it with random digits until an unused ID is found
+		formatted = formatted[:len(formatted)-1]
+		out = (formatted + genID)[:maxIDLen]
 	}
-	out := formatted + genID
-	return out[:8]
+}
+
+func idAlreadyUsed(id string) (bool, error) {
+	db := storage.DB()
+	if db == nil {
+		return true, errors.New("failed to get task database")
+	}
+
+	inUse := false
+	err := db.View(func(tx *bbolt.Tx) error {
+		b := tx.Bucket([]byte(storage.ACTIVE_BUCKET))
+		if b == nil {
+			return errors.New("failed to get active tasks bucket")
+		}
+		if b.Get([]byte(id)) != nil {
+			inUse = true
+		}
+		return nil
+	})
+	return inUse, err
 }
 
 // AddTask creates a new task and stores it in the database
@@ -296,7 +335,7 @@ func PrintListOfTasks(tasks []types.Task) {
 			var value string
 			switch header {
 			case colID:
-				value = task.ID
+				value = task.ID[:8]
 			case colTitle:
 				value = task.Title
 			case colCategory:

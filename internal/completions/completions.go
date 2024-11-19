@@ -94,7 +94,7 @@ func TaskIDCompletionFn(firstArgOnly bool) func(cmd *cobra.Command, args []strin
 		}
 		var matches []string
 		for _, preview := range taskPreviews {
-			comp := fmt.Sprintf("%s\t(%s)", preview.ID, util.Truncate(preview.Title, 10))
+			comp := fmt.Sprintf("%s\t(%s)", preview.ID, util.Truncate(preview.Title, 20))
 			matches = append(matches, comp)
 		}
 
