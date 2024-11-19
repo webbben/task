@@ -61,6 +61,8 @@ var (
 //
 // If a given title is already taken (e.g. you use the same or similar title for tasks often), then
 // the task ID will progressively become more full of random digits, starting from the end.
+//
+// pass in an empty string to get a random ID that isn't based on any title text.
 func GenerateTaskID(title string) string {
 	maxIDLen := 12
 	formatted := strings.ToLower(strings.ReplaceAll(title, " ", ""))

@@ -44,7 +44,9 @@ func CompleteTask(id string) error {
 		if err != nil {
 			return err
 		}
-		return monthBucket.Put([]byte(id), taskData)
+		// generate complete random task ID to free up title-based ones for active tasks
+		archiveID := GenerateTaskID("")
+		return monthBucket.Put([]byte(archiveID), taskData)
 	})
 }
 
