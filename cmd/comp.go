@@ -1,12 +1,10 @@
-/*
-Copyright © 2024 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/webbben/task/internal/completions"
 	"github.com/webbben/task/internal/tasks"
 	"github.com/webbben/task/internal/util"
 )
@@ -26,11 +24,14 @@ task comp 9bc3`,
 			cmd.PrintErrln("task ID required")
 			return
 		}
-		taskID := args[0]
-
-		if err := tasks.CompleteTask(taskID); err != nil {
-			cmd.PrintErrln(err)
-			return
+		// all arguments will be task IDs
+		for i, taskID := range args {
+			if err := tasks.CompleteTask(taskID); err != nil {
+				cmd.PrintErrln(err)
+				if i == 0 {
+					return // no tasks were completed, so quit without showing summary
+				}
+			}
 		}
 
 		todaysCompTasks, err := tasks.GetCompletedTasks(util.RoundDateDown(time.Now()))
@@ -43,14 +44,6 @@ task comp 9bc3`,
 }
 
 func init() {
-	compCmd.ValidArgsFunction = completionFn
+	compCmd.ValidArgsFunction = completions.TaskIDCompletionFn(false)
 	rootCmd.AddCommand(compCmd)
-}
-
-func completionFn(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-	if len(args) > 0 {
-		return []string{}, cobra.ShellCompDirectiveNoFileComp
-	}
-
-	return taskIDCompletion(cmd, args, toComplete)
 }

@@ -32,7 +32,7 @@ const (
 var (
 	// colors for due dates
 	veryLate = color.New(color.BgRed)
-	late     = color.New(color.FgRed)
+	late     = color.New(color.FgHiRed)
 	today    = color.New(color.FgHiYellow)
 	tomorrow = color.New(color.FgCyan)
 
@@ -302,7 +302,7 @@ func PrintListOfTasks(tasks []types.Task) {
 			case colCategory:
 				value = task.Category
 			case colDueDate:
-				value = formatDate(task.DueDate)
+				value = formatDate(task.DueDate, task.Status == constants.TaskStatus.Complete)
 			case colStatus:
 				value = formatStatus(task.Status)
 			case colPriority:
@@ -348,7 +348,7 @@ func baseTableWidth() int {
 }
 
 // formatDate formats the given date to M-D. If year is not current, also shows year at the end in parentheses.
-func formatDate(date time.Time) string {
+func formatDate(date time.Time, skipColor bool) string {
 	// Create a new time for the end of today
 	now := time.Now()
 	t := time.Date(
@@ -364,15 +364,17 @@ func formatDate(date time.Time) string {
 		out += "-" + date.Format("2006")
 	}
 
-	switch {
-	case date.Before(dateTwoDaysAgo):
-		out = veryLate.Sprint(out)
-	case date.Before(dateYesterday):
-		out = late.Sprint(out)
-	case date.Before(t):
-		out = today.Sprint(out)
-	case date.Before(dateTomorrow):
-		out = tomorrow.Sprint(out)
+	if !skipColor {
+		switch {
+		case date.Before(dateTwoDaysAgo):
+			out = veryLate.Sprint(out)
+		case date.Before(dateYesterday):
+			out = late.Sprint(out)
+		case date.Before(t):
+			out = today.Sprint(out)
+		case date.Before(dateTomorrow):
+			out = tomorrow.Sprint(out)
+		}
 	}
 
 	return out

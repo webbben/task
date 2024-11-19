@@ -1,4 +1,4 @@
-package util
+package completions
 
 import (
 	"encoding/json"
@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/webbben/task/internal/storage"
 	"github.com/webbben/task/internal/types"
+	"github.com/webbben/task/internal/util"
 	"go.etcd.io/bbolt"
 )
 
@@ -56,22 +57,6 @@ func CompleteTaskID(s string) ([]TaskPreview, error) {
 	return taskPreviews, err
 }
 
-// TaskIDCompletionFn is a completion function for task IDs. Used for completions with cobra commands.
-func TaskIDCompletionFn(s string, cmd *cobra.Command) ([]string, cobra.ShellCompDirective) {
-	taskPreviews, err := CompleteTaskID(s)
-	if err != nil {
-		cmd.PrintErrln("Error finding task IDs:", err)
-		return nil, cobra.ShellCompDirectiveNoFileComp
-	}
-	var matches []string
-	for _, preview := range taskPreviews {
-		comp := fmt.Sprintf("%s\t(%s)", preview.ID, Truncate(preview.Title, 10))
-		matches = append(matches, comp)
-	}
-
-	return matches, cobra.ShellCompDirectiveNoFileComp
-}
-
 // MatchFromListCompletionFn is a completion function for a given list of possible options.
 //
 // if the given string is a substring (or equal) to any of the options, those options will be returned.
@@ -88,4 +73,31 @@ func MatchFromListCompletionFn(s string, options []string, cmd *cobra.Command) (
 	}
 
 	return matches, cobra.ShellCompDirectiveNoFileComp
+}
+
+// TaskIDCompletionFn provides a completion function for completing a task ID
+//
+// firstArgOnly - if true, only do completion if its the first arg after the command
+func TaskIDCompletionFn(firstArgOnly bool) func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	return func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		// only do completion for the task ID arg, which is the first one
+		if firstArgOnly && len(args) > 0 {
+			return nil, cobra.ShellCompDirectiveNoFileComp
+		}
+
+		// TODO filter out already entered task IDs if args > 0
+
+		taskPreviews, err := CompleteTaskID(toComplete)
+		if err != nil {
+			cmd.PrintErrln("Error finding task IDs:", err)
+			return nil, cobra.ShellCompDirectiveNoFileComp
+		}
+		var matches []string
+		for _, preview := range taskPreviews {
+			comp := fmt.Sprintf("%s\t(%s)", preview.ID, util.Truncate(preview.Title, 10))
+			matches = append(matches, comp)
+		}
+
+		return matches, cobra.ShellCompDirectiveNoFileComp
+	}
 }

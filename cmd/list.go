@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/webbben/task/internal/constants"
 	"github.com/webbben/task/internal/tasks"
 	"github.com/webbben/task/internal/types"
 	"github.com/webbben/task/internal/util"
@@ -75,6 +76,16 @@ func init() {
 }
 
 func showTodoTasks(t []types.Task) {
+	t = filterTasks(t, func(t types.Task) bool {
+		if t.Status == constants.TaskStatus.Complete {
+			return true
+		}
+		// task is due later than tomorrow
+		if t.DueDate.After(util.RoundDateUp(time.Now().AddDate(0, 0, 1))) {
+			return true
+		}
+		return false
+	})
 	// sort by due date, but for tasks that are the same due date, sort by priority
 	sort.Slice(t, func(i, j int) bool {
 		if t[i].DueDate.Equal(t[j].DueDate) {
@@ -84,4 +95,17 @@ func showTodoTasks(t []types.Task) {
 	})
 
 	tasks.PrintListOfTasks(t)
+}
+
+// filterTasks takes a filterFunc which is used to filter out tasks.
+//
+// if filterFunc returns true for a given task, that task is filtered out from the output (true -> remove)
+func filterTasks(tasks []types.Task, filterFunc func(t types.Task) bool) []types.Task {
+	out := make([]types.Task, 0)
+	for _, task := range tasks {
+		if !filterFunc(task) {
+			out = append(out, task)
+		}
+	}
+	return out
 }

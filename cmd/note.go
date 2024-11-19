@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/webbben/task/internal/completions"
 	"github.com/webbben/task/internal/tasks"
 	"github.com/webbben/task/internal/util"
 )
@@ -64,16 +65,6 @@ task note 3bp4`,
 }
 
 func init() {
-	noteCmd.ValidArgsFunction = taskIDCompletion
+	noteCmd.ValidArgsFunction = completions.TaskIDCompletionFn(true)
 	rootCmd.AddCommand(noteCmd)
-}
-
-// taskIDCompletion provides auto-completion for task IDs
-func taskIDCompletion(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-	// only do completion for the task ID arg, which is the first one
-	if len(args) > 0 {
-		return nil, cobra.ShellCompDirectiveNoFileComp
-	}
-
-	return util.TaskIDCompletionFn(toComplete, cmd)
 }

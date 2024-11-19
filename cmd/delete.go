@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
+	"github.com/webbben/task/internal/completions"
 	"github.com/webbben/task/internal/tasks"
 	"github.com/webbben/task/internal/util"
 )
@@ -42,6 +43,7 @@ task delete -a`,
 }
 
 func init() {
+	deleteCmd.ValidArgsFunction = completions.TaskIDCompletionFn(false)
 	rootCmd.AddCommand(deleteCmd)
 
 	deleteCmd.Flags().BoolVarP(&all, "all", "a", false, "delete all tasks")
