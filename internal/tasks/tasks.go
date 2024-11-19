@@ -4,9 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
+	"os"
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/x/term"
 	"github.com/fatih/color"
 	"github.com/google/uuid"
 	"github.com/webbben/task/internal/constants"
@@ -243,9 +246,18 @@ func DeleteAllTasks() error {
 
 // DisplayTasks prints a list of tasks in a formatted table
 func PrintListOfTasks(tasks []types.Task) {
+	totalWidth, _, err := term.GetSize(os.Stdin.Fd())
+	if err != nil {
+		log.Println("failed to get terminal size:", err)
+		totalWidth = 80
+	}
+	totalWidth -= 2
 	// Set up gray color for borders
 	borderColor := color.New(color.FgHiBlack)
-	totalWidth := totalTableWidth() + len(headers)*3 - 1
+	titleWidth := totalWidth - baseTableWidth()
+	if titleWidth > colWidths[colTitle] {
+		colWidths[colTitle] = titleWidth
+	}
 
 	// Create top border, header separator, and bottom border with lighter color
 	topBorder := borderColor.Sprintf("┌%s┐\n", strings.Repeat("─", totalWidth))
@@ -304,13 +316,17 @@ func PrintListOfTasks(tasks []types.Task) {
 	fmt.Print(bottomBorder)
 }
 
-// sum calculates the total width of the columns and adds padding for borders
-func totalTableWidth() int {
+// sum calculates the total width of the fixed-size columns (i.e. those besides the title)
+// including padding
+func baseTableWidth() int {
 	total := 0
 	for _, header := range headers {
+		if header == colTitle {
+			continue
+		}
 		total += colWidths[header]
 	}
-	return total
+	return total + len(headers)*3 - 1
 }
 
 // formatDate formats the given date to M-D. If year is not current, also shows year at the end in parentheses.

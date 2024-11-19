@@ -5,6 +5,7 @@ package cmd
 
 import (
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -83,7 +84,16 @@ func parseDueDate(dueDate string) (time.Time, error) {
 		}
 		return time.Parse("1/2/2006", dueDate)
 	}
-	// if its not a full date, then it should be a relative date
+
+	// check if it's a weekday
+	if len(dueDate) >= 3 {
+		isWeekday, weekdayDueDate := parseWeekDay(dueDate)
+		if isWeekday {
+			return weekdayDueDate, nil
+		}
+	}
+
+	// if its not a full date or weekday, then it should be a relative date
 	// check if the format is correct (number followed by a letter)
 	if len(dueDate) < 2 {
 		return time.Time{}, fmt.Errorf("invalid date format")
@@ -107,4 +117,36 @@ func parseDueDate(dueDate string) (time.Time, error) {
 	default:
 		return time.Time{}, fmt.Errorf("invalid unit for relative due date")
 	}
+}
+
+func parseWeekDay(s string) (bool, time.Time) {
+	if len(s) < 3 {
+		return false, time.Time{}
+	}
+	weekdays := []string{"mon", "tue", "wed", "thu", "fri", "sat", "sun"}
+	match := ""
+	s = strings.ToLower(s)
+	for _, day := range weekdays {
+		if strings.HasPrefix(s, day) {
+			match = day
+			break
+		}
+	}
+	if match == "" {
+		return false, time.Time{}
+	}
+
+	// find the next date for the given day of the week
+	// start at tomorrow, so if entered day of week is the same as today, it goes to next week instead of today
+	cur := time.Now().AddDate(0, 0, 1)
+	i := 0
+	for strings.ToLower(cur.Format("Mon")) != match {
+		cur = cur.AddDate(0, 0, 1)
+		i++
+		if i > 7 {
+			log.Println("failed to find next weekday?")
+			break
+		}
+	}
+	return true, cur
 }
