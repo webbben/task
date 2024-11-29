@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -65,7 +66,8 @@ var (
 // pass in an empty string to get a random ID that isn't based on any title text.
 func GenerateTaskID(title string) string {
 	maxIDLen := 12
-	formatted := strings.ToLower(strings.ReplaceAll(title, " ", ""))
+	re := regexp.MustCompile(`[^a-zA-Z0-9]+`)
+	formatted := strings.ToLower(re.ReplaceAllString(title, ""))
 	genID := strings.ReplaceAll(uuid.New().String(), "-", "")
 	out := (formatted + genID)[:maxIDLen]
 	for {
@@ -492,26 +494,6 @@ func FindTasksByIDPrefix(prefix string) ([]string, error) {
 		})
 	})
 	return matchingIDs, err
-}
-
-func ListPotentialTaskMatches(taskIDs []string) {
-	db := storage.DB()
-	if db == nil {
-		fmt.Println()
-	}
-	tasks, err := GetTasks(taskIDs)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	for _, t := range tasks {
-		taskTitle := t.Title
-		if len(taskTitle) > 15 {
-			taskTitle = taskTitle[:12] + "..."
-		}
-		fmt.Printf("%s (%s)", t.ID, taskTitle)
-	}
 }
 
 func removeHeader(h string) {

@@ -27,25 +27,6 @@ task note 3bp4`,
 			return
 		}
 		taskID := args[0]
-		if len(taskID) > 8 {
-			cmd.PrintErrln("invalid task ID")
-			return
-		}
-
-		// if incomplete task ID, find a match if possible
-		if len(taskID) < 8 {
-			// find the full taskID
-			matches, err := tasks.FindTasksByIDPrefix(taskID)
-			if err != nil {
-				cmd.PrintErrln(err)
-				return
-			}
-			if len(matches) > 1 {
-				tasks.ListPotentialTaskMatches(matches)
-				return
-			}
-			taskID = matches[0]
-		}
 
 		// get note to add to task
 		today := time.Now().Format("1-2-2006 15:04")
@@ -55,6 +36,10 @@ task note 3bp4`,
 		} else {
 			// launch terminal text editor to get note from user
 			note = util.OpenEditor()
+		}
+		if note == "" {
+			fmt.Println("No note was entered.")
+			return
 		}
 		if err := tasks.AddNote(taskID, note, today); err != nil {
 			cmd.PrintErrln("Error adding note:", err)
