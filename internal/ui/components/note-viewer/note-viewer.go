@@ -36,32 +36,35 @@ type NoteViewerModel struct {
 	title       string
 	ready       bool
 	viewport    viewport.Model
+	onClose     func()
 }
 
-func New(title, textContent string) *NoteViewerModel {
+func New(title, textContent string, onClose func()) *NoteViewerModel {
 	m := new(NoteViewerModel)
 	m.title = title
 	m.textContent = textContent
+	m.onClose = onClose
 	return m
 }
 
 func (m *NoteViewerModel) SetNoteContent(title string, text string) {
 	m.title = title
 	m.textContent = text
+	m.viewport.SetContent(m.textContent)
 }
 
 func (m NoteViewerModel) Init() tea.Cmd {
 	return nil
 }
 
-func (m NoteViewerModel) Update(msg tea.Msg) (NoteViewerModel, tea.Cmd) {
+func (m *NoteViewerModel) Update(msg tea.Msg) (*NoteViewerModel, tea.Cmd) {
 	var cmd tea.Cmd
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		if k := msg.String(); k == "ctrl+c" || k == "q" || k == "esc" {
-			return m, tea.Quit
+		if msg.String() == "q" {
+			m.onClose()
 		}
 	case tea.WindowSizeMsg:
 		headerHeight := lipgloss.Height(m.headerView())
